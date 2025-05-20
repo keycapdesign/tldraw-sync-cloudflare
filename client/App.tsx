@@ -24,25 +24,17 @@ function TldrawApp() {
 	// Create the authenticated bookmark preview handler
 	const bookmarkPreviewHandler = createBookmarkPreviewHandler();
 
-	// Create store connected to multiplayer with authentication
-	const store = useSync({
-		// We need to know the websockets URI...
-		uri: `${WORKER_URL}/connect/${roomId}`,
-		// ...and how to handle static assets like images & videos
-		assets: assetStore,
-	})
+	// State to store the authentication token
+	const [authToken, setAuthToken] = useState<string | null>(null);
 
-	// Handle authentication after the store is created
+	// Get the authentication token
 	useEffect(() => {
-		// Function to authenticate the connection
-		const authenticateConnection = async () => {
+		const getAuthenticationToken = async () => {
 			try {
-				// Get the auth token
 				const token = await getToken();
 				if (token) {
-					// In a real implementation, you would send the token with the WebSocket connection
-					// or include it in API requests
 					console.log('Authentication token obtained');
+					setAuthToken(token);
 				}
 			} catch (error) {
 				console.error('Error getting auth token:', error);
@@ -51,9 +43,21 @@ function TldrawApp() {
 			}
 		};
 
-		// Call the authentication function
-		authenticateConnection();
+		getAuthenticationToken();
 	}, [getToken]);
+
+	// Create a custom URI with the auth token as a query parameter
+	const wsUri = authToken
+		? `${WORKER_URL}/connect/${roomId}?auth=${encodeURIComponent(authToken)}`
+		: `${WORKER_URL}/connect/${roomId}`;
+
+	// Create store connected to multiplayer with authentication
+	const store = useSync({
+		// We need to know the websockets URI...
+		uri: wsUri,
+		// ...and how to handle static assets like images & videos
+		assets: assetStore,
+	})
 
 	// Show loading state while connecting
 	if (isConnecting) {

@@ -29,6 +29,16 @@ const router = AutoRouter<IRequest, [env: Environment, ctx: ExecutionContext]>({
 
 	// requests to /connect are routed to the Durable Object, and handle realtime websocket syncing
 	.get('/connect/:roomId', async (request, env) => {
+		// Check if auth token is provided in the query parameter
+		const url = new URL(request.url);
+		const authToken = url.searchParams.get('auth');
+
+		// If auth token is provided, add it to the Authorization header
+		if (authToken) {
+			(request as any).headers = new Headers(request.headers);
+			(request as any).headers.set('Authorization', `Bearer ${authToken}`);
+		}
+
 		// Check authentication before allowing connection
 		const authResult = await requireAuth(request, env)
 		if (authResult instanceof Response) {
