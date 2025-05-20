@@ -1,0 +1,9 @@
+{
+  "buildCommand": "yarn build",
+  "installCommand": "yarn install --ignore-engines",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "env": {
+    "TLDRAW_WORKER_URL": "https://tldraw-worker.andrew-eca.workers.dev"
+  }
+}
