@@ -5,6 +5,6 @@
   "framework": "vite",
   "env": {
     "TLDRAW_WORKER_URL": "https://tldraw-worker.andrew-eca.workers.dev",
-    "VITE_CLERK_PUBLISHABLE_KEY": "pk_test_dG9wLWdyaWZmb24tMTkuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    "VITE_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuZG1raXQuaW8k"
   }
 }

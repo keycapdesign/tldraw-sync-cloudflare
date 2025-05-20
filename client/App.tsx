@@ -31,15 +31,22 @@ function TldrawApp() {
 	useEffect(() => {
 		const getAuthenticationToken = async () => {
 			try {
+				console.log('Getting authentication token...');
 				const token = await getToken();
 				if (token) {
 					console.log('Authentication token obtained');
 					setAuthToken(token);
+				} else {
+					console.warn('No authentication token obtained');
 				}
 			} catch (error) {
 				console.error('Error getting auth token:', error);
 			} finally {
-				setIsConnecting(false);
+				// Set a short delay before setting isConnecting to false
+				// to ensure the token is properly set before attempting to connect
+				setTimeout(() => {
+					setIsConnecting(false);
+				}, 500);
 			}
 		};
 
@@ -58,6 +65,46 @@ function TldrawApp() {
 		// ...and how to handle static assets like images & videos
 		assets: assetStore,
 	})
+
+	// Add a separate effect to handle WebSocket connection
+	useEffect(() => {
+		if (!store || isConnecting) return;
+
+		// Get the WebSocket instance from the store
+		const socket = (store as any).socket;
+
+		if (socket) {
+			console.log('WebSocket connected');
+
+			// Send authentication token if available
+			if (authToken) {
+				console.log('Sending auth token');
+				socket.send(JSON.stringify({ type: 'auth', token: authToken }));
+			}
+
+			// Add event listeners for debugging
+			socket.addEventListener('error', (event: Event) => {
+				console.error('WebSocket error:', event);
+			});
+
+			socket.addEventListener('close', (event: CloseEvent) => {
+				console.log('WebSocket closed', { code: event.code, reason: event.reason });
+			});
+
+			socket.addEventListener('open', () => {
+				console.log('WebSocket opened');
+			});
+		}
+
+		return () => {
+			// Clean up event listeners when the component unmounts
+			if (socket) {
+				socket.removeEventListener('error', () => {});
+				socket.removeEventListener('close', () => {});
+				socket.removeEventListener('open', () => {});
+			}
+		};
+	}, [store, authToken, isConnecting]);
 
 	// Show loading state while connecting
 	if (isConnecting) {

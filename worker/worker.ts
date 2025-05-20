@@ -33,14 +33,24 @@ const router = AutoRouter<IRequest, [env: Environment, ctx: ExecutionContext]>({
 		const url = new URL(request.url);
 		const authToken = url.searchParams.get('auth');
 
-		// If auth token is provided, add it to the Authorization header
+		// Create a new headers object with the auth token if provided
+		const headers = new Headers(request.headers);
 		if (authToken) {
-			(request as any).headers = new Headers(request.headers);
-			(request as any).headers.set('Authorization', `Bearer ${authToken}`);
+			headers.set('Authorization', `Bearer ${authToken}`);
 		}
 
+		// Create a new request with the updated headers
+		const authenticatedRequest = new Request(request.url, {
+			method: request.method,
+			headers: headers,
+			body: request.body,
+		});
+
+		// Add the params from the original request
+		(authenticatedRequest as any).params = request.params;
+
 		// Check authentication before allowing connection
-		const authResult = await requireAuth(request, env)
+		const authResult = await requireAuth(authenticatedRequest, env)
 		if (authResult instanceof Response) {
 			return authResult
 		}
@@ -49,9 +59,8 @@ const router = AutoRouter<IRequest, [env: Environment, ctx: ExecutionContext]>({
 		const room = env.TLDRAW_DURABLE_OBJECT.get(id)
 
 		// Pass the user ID to the Durable Object if available
-		const headers = new Headers(request.headers)
-		if (request.userId) {
-			headers.set('X-User-ID', request.userId)
+		if (authenticatedRequest.userId) {
+			headers.set('X-User-ID', authenticatedRequest.userId)
 		}
 
 		return room.fetch(request.url, { headers, body: request.body })
@@ -59,8 +68,21 @@ const router = AutoRouter<IRequest, [env: Environment, ctx: ExecutionContext]>({
 
 	// assets can be uploaded to the bucket under /uploads:
 	.post('/uploads/:uploadId', async (request, env) => {
+		// Create a new headers object from the request
+		const headers = new Headers(request.headers);
+
+		// Create a new request with the headers
+		const authenticatedRequest = new Request(request.url, {
+			method: request.method,
+			headers: headers,
+			body: request.body,
+		});
+
+		// Add the params from the original request
+		(authenticatedRequest as any).params = request.params;
+
 		// Check authentication before allowing upload
-		const authResult = await requireAuth(request, env)
+		const authResult = await requireAuth(authenticatedRequest, env)
 		if (authResult instanceof Response) {
 			return authResult
 		}

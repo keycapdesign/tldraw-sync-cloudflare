@@ -81,13 +81,21 @@ export class TldrawDurableObject {
 		let authenticated = !!userId; // If we have a userId from headers, consider it authenticated
 		let userMetadata = userId ? { userId } : undefined;
 
+		console.log('WebSocket connection established', {
+			sessionId,
+			authenticated,
+			hasUserId: !!userId
+		});
+
 		// Handle messages from the client
 		serverWebSocket.addEventListener('message', async (event) => {
 			try {
 				const data = JSON.parse(event.data as string);
+				console.log('WebSocket message received', { type: data.type });
 
 				// Handle authentication message
 				if (data.type === 'auth' && data.token) {
+					console.log('Auth message received');
 					// In a real implementation, you would verify the token here
 					// For now, we'll just extract the user ID from the token
 					// This is a simplified example - in production, use proper JWT verification
@@ -98,6 +106,7 @@ export class TldrawDurableObject {
 							if (payload.sub) {
 								authenticated = true;
 								userMetadata = { userId: payload.sub };
+								console.log('Authentication successful', { userId: payload.sub });
 							}
 						} catch (e) {
 							console.error('Error parsing token:', e);
@@ -109,6 +118,15 @@ export class TldrawDurableObject {
 			}
 		});
 
+		// Add error and close event listeners for debugging
+		serverWebSocket.addEventListener('error', (error) => {
+			console.error('WebSocket error:', error);
+		});
+
+		serverWebSocket.addEventListener('close', (event) => {
+			console.log('WebSocket closed', { code: event.code, reason: event.reason });
+		});
+
 		// connect the client to the room
 		room.handleSocketConnect({
 			sessionId,
@@ -116,6 +134,8 @@ export class TldrawDurableObject {
 			// Add user metadata if available
 			metadata: userMetadata
 		})
+
+		console.log('Client connected to room', { roomId: this.roomId, sessionId });
 
 		// return the websocket connection to the client
 		return new Response(null, { status: 101, webSocket: clientWebSocket })

@@ -20,9 +20,14 @@ preview_bucket_name = 'tldraw-preview'
 
 # Environment variables
 [vars]
-# Replace with your actual Clerk secret key
+# Replace with your actual Clerk keys
 CLERK_SECRET_KEY="sk_live_dJnyu4n5NGVpedSBsuLOswJpPzpTdSDkN7gFNQ8sxs"
+CLERK_PUBLISHABLE_KEY="pk_live_Y2xlcmsuZG1raXQuaW8k"
 
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = [ "TldrawDurableObject" ]
+
+[observability]
+enabled = true
+head_sampling_rate = 1 # optional. default = 1.

@@ -11,8 +11,11 @@ export const requireAuth = async (request: IRequest, env: Environment) => {
   }
 
   try {
-    // Initialize Clerk with the secret key
-    const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
+    // Initialize Clerk with the secret key and publishable key
+    const clerk = createClerkClient({
+      secretKey: env.CLERK_SECRET_KEY,
+      publishableKey: env.CLERK_PUBLISHABLE_KEY
+    });
 
     // Get the session from the request
     // This automatically checks for the Authorization header or the clerk-session-id cookie

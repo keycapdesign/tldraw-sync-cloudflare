@@ -4,6 +4,7 @@ export interface Environment {
 	TLDRAW_BUCKET: R2Bucket
 	TLDRAW_DURABLE_OBJECT: DurableObjectNamespace
 	CLERK_SECRET_KEY: string
+	CLERK_PUBLISHABLE_KEY: string
 }
 
 // Extend the IRequest interface to include userId
