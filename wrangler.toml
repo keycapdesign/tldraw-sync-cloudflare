@@ -21,7 +21,7 @@ preview_bucket_name = 'tldraw-preview'
 # Environment variables
 [vars]
 # Replace with your actual Clerk secret key
-CLERK_SECRET_KEY="sk_test_CCqHKAlY6pNmg1LRfM4Sn8EJH0oe30QZe0jbzsxUx7"
+CLERK_SECRET_KEY="sk_live_dJnyu4n5NGVpedSBsuLOswJpPzpTdSDkN7gFNQ8sxs"
 
 [[migrations]]
 tag = "v1"
