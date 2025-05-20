@@ -70,6 +70,17 @@ export class TldrawDurableObject {
 		// Get user ID from the headers if available
 		const userId = request.headers.get('X-User-ID')
 
+		// Get auth token from query params if available
+		const url = new URL(request.url);
+		const authToken = url.searchParams.get('auth');
+
+		console.log('WebSocket connection request', {
+			sessionId,
+			hasUserId: !!userId,
+			hasAuthToken: !!authToken,
+			headers: JSON.stringify(Object.fromEntries([...request.headers.entries()]))
+		});
+
 		// Create the websocket pair for the client
 		const { 0: clientWebSocket, 1: serverWebSocket } = new WebSocketPair()
 		serverWebSocket.accept()

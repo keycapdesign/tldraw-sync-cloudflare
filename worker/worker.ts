@@ -9,7 +9,13 @@ export { TldrawDurableObject } from './TldrawDurableObject'
 
 // we use itty-router (https://itty.dev/) to handle routing. in this example we turn on CORS because
 // we're hosting the worker separately to the client. you should restrict this to your own domain.
-const { preflight, corsify } = cors({ origin: '*' })
+const { preflight, corsify } = cors({
+	origin: '*',
+	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+	allowHeaders: ['Content-Type', 'Authorization', 'X-User-ID'],
+	credentials: true,
+	maxAge: 86400,
+})
 const router = AutoRouter<IRequest, [env: Environment, ctx: ExecutionContext]>({
 	before: [preflight],
 	finally: [corsify],

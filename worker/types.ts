@@ -5,6 +5,7 @@ export interface Environment {
 	TLDRAW_DURABLE_OBJECT: DurableObjectNamespace
 	CLERK_SECRET_KEY: string
 	CLERK_PUBLISHABLE_KEY: string
+	ENVIRONMENT?: string
 }
 
 // Extend the IRequest interface to include userId

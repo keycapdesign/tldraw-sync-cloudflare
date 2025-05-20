@@ -5,6 +5,7 @@ compatibility_date = "2024-07-01"
 [dev]
 port = 5172
 ip = "0.0.0.0"
+vars = { ENVIRONMENT = "development" }
 
 # Set up the durable object used for each tldraw room
 [durable_objects]
@@ -23,6 +24,7 @@ preview_bucket_name = 'tldraw-preview'
 # Replace with your actual Clerk keys
 CLERK_SECRET_KEY="sk_live_dJnyu4n5NGVpedSBsuLOswJpPzpTdSDkN7gFNQ8sxs"
 CLERK_PUBLISHABLE_KEY="pk_live_Y2xlcmsuZG1raXQuaW8k"
+ENVIRONMENT="production"
 
 [[migrations]]
 tag = "v1"
