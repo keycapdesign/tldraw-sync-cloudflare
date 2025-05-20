@@ -4,7 +4,7 @@ import { getBookmarkPreview } from './getBookmarkPreview'
 import { multiplayerAssetStore } from './multiplayerAssetStore'
 
 // Where is our worker located? Configure this in `vite.config.ts`
-const WORKER_URL = process.env.TLDRAW_WORKER_URL
+const WORKER_URL = import.meta.env.VITE_TLDRAW_WORKER_URL
 
 // In this example, the room ID is hard-coded. You can set this however you like though.
 const roomId = 'test-room'
