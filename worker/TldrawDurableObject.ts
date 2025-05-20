@@ -67,6 +67,9 @@ export class TldrawDurableObject {
 		const sessionId = request.query.sessionId as string
 		if (!sessionId) return error(400, 'Missing sessionId')
 
+		// Get user ID from the headers if available
+		const userId = request.headers.get('X-User-ID')
+
 		// Create the websocket pair for the client
 		const { 0: clientWebSocket, 1: serverWebSocket } = new WebSocketPair()
 		serverWebSocket.accept()
@@ -74,8 +77,45 @@ export class TldrawDurableObject {
 		// load the room, or retrieve it if it's already loaded
 		const room = await this.getRoom()
 
+		// Set up message handler for authentication
+		let authenticated = !!userId; // If we have a userId from headers, consider it authenticated
+		let userMetadata = userId ? { userId } : undefined;
+
+		// Handle messages from the client
+		serverWebSocket.addEventListener('message', async (event) => {
+			try {
+				const data = JSON.parse(event.data as string);
+
+				// Handle authentication message
+				if (data.type === 'auth' && data.token) {
+					// In a real implementation, you would verify the token here
+					// For now, we'll just extract the user ID from the token
+					// This is a simplified example - in production, use proper JWT verification
+					const tokenParts = data.token.split('.');
+					if (tokenParts.length === 3) {
+						try {
+							const payload = JSON.parse(atob(tokenParts[1]));
+							if (payload.sub) {
+								authenticated = true;
+								userMetadata = { userId: payload.sub };
+							}
+						} catch (e) {
+							console.error('Error parsing token:', e);
+						}
+					}
+				}
+			} catch (e) {
+				console.error('Error handling WebSocket message:', e);
+			}
+		});
+
 		// connect the client to the room
-		room.handleSocketConnect({ sessionId, socket: serverWebSocket })
+		room.handleSocketConnect({
+			sessionId,
+			socket: serverWebSocket,
+			// Add user metadata if available
+			metadata: userMetadata
+		})
 
 		// return the websocket connection to the client
 		return new Response(null, { status: 101, webSocket: clientWebSocket })

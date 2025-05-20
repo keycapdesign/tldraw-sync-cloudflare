@@ -1,6 +1,7 @@
 import { handleUnfurlRequest } from 'cloudflare-workers-unfurl'
 import { AutoRouter, cors, error, IRequest } from 'itty-router'
 import { handleAssetDownload, handleAssetUpload } from './assetUploads'
+import { requireAuth } from './authMiddleware'
 import { Environment } from './types'
 
 // make sure our sync durable object is made available to cloudflare
@@ -17,17 +18,47 @@ const router = AutoRouter<IRequest, [env: Environment, ctx: ExecutionContext]>({
 		return error(e)
 	},
 })
+	// Public endpoint to check if auth is required
+	.get('/auth-status', (_, env) => {
+		return new Response(JSON.stringify({
+			authRequired: !!env.CLERK_SECRET_KEY,
+		}), {
+			headers: { 'Content-Type': 'application/json' }
+		})
+	})
+
 	// requests to /connect are routed to the Durable Object, and handle realtime websocket syncing
-	.get('/connect/:roomId', (request, env) => {
+	.get('/connect/:roomId', async (request, env) => {
+		// Check authentication before allowing connection
+		const authResult = await requireAuth(request, env)
+		if (authResult instanceof Response) {
+			return authResult
+		}
+
 		const id = env.TLDRAW_DURABLE_OBJECT.idFromName(request.params.roomId)
 		const room = env.TLDRAW_DURABLE_OBJECT.get(id)
-		return room.fetch(request.url, { headers: request.headers, body: request.body })
+
+		// Pass the user ID to the Durable Object if available
+		const headers = new Headers(request.headers)
+		if (request.userId) {
+			headers.set('X-User-ID', request.userId)
+		}
+
+		return room.fetch(request.url, { headers, body: request.body })
 	})
 
 	// assets can be uploaded to the bucket under /uploads:
-	.post('/uploads/:uploadId', handleAssetUpload)
+	.post('/uploads/:uploadId', async (request, env) => {
+		// Check authentication before allowing upload
+		const authResult = await requireAuth(request, env)
+		if (authResult instanceof Response) {
+			return authResult
+		}
 
-	// they can be retrieved from the bucket too:
+		return handleAssetUpload(request, env)
+	})
+
+	// they can be retrieved from the bucket too (public access):
 	.get('/uploads/:uploadId', handleAssetDownload)
 
 	// bookmarks need to extract metadata from pasted URLs:

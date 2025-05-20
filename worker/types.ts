@@ -3,4 +3,12 @@
 export interface Environment {
 	TLDRAW_BUCKET: R2Bucket
 	TLDRAW_DURABLE_OBJECT: DurableObjectNamespace
+	CLERK_SECRET_KEY: string
+}
+
+// Extend the IRequest interface to include userId
+declare module 'itty-router' {
+	interface IRequest {
+		userId?: string;
+	}
 }

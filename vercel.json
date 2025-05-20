@@ -4,6 +4,7 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "env": {
-    "TLDRAW_WORKER_URL": "https://tldraw-worker.andrew-eca.workers.dev"
+    "TLDRAW_WORKER_URL": "https://tldraw-worker.andrew-eca.workers.dev",
+    "VITE_CLERK_PUBLISHABLE_KEY": "pk_test_dG9wLWdyaWZmb24tMTkuY2xlcmsuYWNjb3VudHMuZGV2JA"
   }
 }
