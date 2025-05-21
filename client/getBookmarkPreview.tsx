@@ -1,84 +1,115 @@
-import { AssetRecordType, TLAsset, TLBookmarkAsset, getHashForString } from 'tldraw'
-import { useAuthToken } from './authUtils'
+import {
+  AssetRecordType,
+  TLAsset,
+  TLBookmarkAsset,
+  getHashForString,
+} from "tldraw";
+// We will no longer use useAuthToken directly in createBookmarkPreviewHandler
+// import { useAuthToken } from './authUtils'
 
-// Create a function that returns the bookmark preview handler with authentication
-export function createBookmarkPreviewHandler() {
-	// Get the auth token
-	const { getAuthHeaders } = useAuthToken()
+// Modify createBookmarkPreviewHandler to accept a getToken function
+export function createBookmarkPreviewHandler(
+  getToken: () => Promise<string | null>,
+) {
+  // Return the actual handler function that tldraw will call
+  return async function getBookmarkPreviewWithToken({
+    url,
+  }: {
+    url: string;
+  }): Promise<TLAsset> {
+    const asset: TLBookmarkAsset = {
+      id: AssetRecordType.createId(getHashForString(url)),
+      typeName: "asset",
+      type: "bookmark",
+      meta: {},
+      props: {
+        src: url,
+        description: "",
+        image: "",
+        favicon: "",
+        title: "",
+      },
+    };
 
-	// Return the handler function
-	return async function getBookmarkPreview({ url }: { url: string }): Promise<TLAsset> {
-		// we start with an empty asset record
-		const asset: TLBookmarkAsset = {
-			id: AssetRecordType.createId(getHashForString(url)),
-			typeName: 'asset',
-			type: 'bookmark',
-			meta: {},
-			props: {
-				src: url,
-				description: '',
-				image: '',
-				favicon: '',
-				title: '',
-			},
-		}
+    try {
+      const token = getToken ? await getToken() : null;
+      const headers: HeadersInit = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
 
-		try {
-			// Get authentication headers
-			const authHeaders = await getAuthHeaders()
+      const response = await fetch(
+        `${import.meta.env.VITE_TLDRAW_WORKER_URL}/unfurl?url=${encodeURIComponent(url)}`,
+        { headers },
+      );
 
-			// try to fetch the preview data from the server
-			const response = await fetch(
-				`${import.meta.env.VITE_TLDRAW_WORKER_URL}/unfurl?url=${encodeURIComponent(url)}`,
-				{ headers: authHeaders }
-			)
-			const data = await response.json()
+      // It's good practice to check if the response was ok before trying to parse JSON
+      if (!response.ok) {
+        console.error(
+          `Error fetching bookmark preview: ${response.status} ${response.statusText}`,
+        );
+        // You might want to return the asset with minimal info or throw an error
+        // For now, just logging and continuing to parse (which might fail if no JSON body)
+      }
 
-			// fill in our asset with whatever info we found
-			asset.props.description = data?.description ?? ''
-			asset.props.image = data?.image ?? ''
-			asset.props.favicon = data?.favicon ?? ''
-			asset.props.title = data?.title ?? ''
-		} catch (e) {
-			console.error(e)
-		}
+      const data = await response.json();
 
-		return asset
-	}
+      asset.props.description = data?.description ?? "";
+      asset.props.image = data?.image ?? "";
+      asset.props.favicon = data?.favicon ?? "";
+      asset.props.title = data?.title ?? "";
+    } catch (e) {
+      console.error("Failed to get bookmark preview:", e);
+      // Populate with fallback title on error
+      asset.props.title = `Error fetching preview for ${url}`;
+    }
+
+    return asset;
+  };
 }
 
-// For backward compatibility, export a default handler
-export async function getBookmarkPreview({ url }: { url: string }): Promise<TLAsset> {
-	// we start with an empty asset record
-	const asset: TLBookmarkAsset = {
-		id: AssetRecordType.createId(getHashForString(url)),
-		typeName: 'asset',
-		type: 'bookmark',
-		meta: {},
-		props: {
-			src: url,
-			description: '',
-			image: '',
-			favicon: '',
-			title: '',
-		},
-	}
+// The original getBookmarkPreview can remain as a fallback or for unauthenticated scenarios
+// if you choose, but the createBookmarkPreviewHandler is what App.tsx should use
+// when intending to use auth. For now, let's assume App.tsx will always provide getToken.
+// If createBookmarkPreviewHandler is always used, this default export might become obsolete
+// or could be a version that doesn't use auth.
+export async function getBookmarkPreview({
+  url,
+}: {
+  url: string;
+}): Promise<TLAsset> {
+  const asset: TLBookmarkAsset = {
+    id: AssetRecordType.createId(getHashForString(url)),
+    typeName: "asset",
+    type: "bookmark",
+    meta: {},
+    props: {
+      src: url,
+      description: "",
+      image: "",
+      favicon: "",
+      title: "",
+    },
+  };
 
-	try {
-		// try to fetch the preview data from the server
-		const response = await fetch(
-			`${import.meta.env.VITE_TLDRAW_WORKER_URL}/unfurl?url=${encodeURIComponent(url)}`
-		)
-		const data = await response.json()
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_TLDRAW_WORKER_URL}/unfurl?url=${encodeURIComponent(url)}`,
+    );
+    if (!response.ok) {
+      console.error(
+        `Error fetching (default) bookmark preview: ${response.status} ${response.statusText}`,
+      );
+    }
+    const data = await response.json();
 
-		// fill in our asset with whatever info we found
-		asset.props.description = data?.description ?? ''
-		asset.props.image = data?.image ?? ''
-		asset.props.favicon = data?.favicon ?? ''
-		asset.props.title = data?.title ?? ''
-	} catch (e) {
-		console.error(e)
-	}
-
-	return asset
+    asset.props.description = data?.description ?? "";
+    asset.props.image = data?.image ?? "";
+    asset.props.favicon = data?.favicon ?? "";
+    asset.props.title = data?.title ?? "";
+  } catch (e) {
+    console.error("Failed to get (default) bookmark preview:", e);
+    asset.props.title = `Error fetching preview for ${url}`;
+  }
+  return asset;
 }

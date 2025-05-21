@@ -13,6 +13,7 @@ export const requireAuth = async (request: IRequest, env: Environment) => {
   // Check if we're in development mode
   const headers = (request as unknown as Request).headers;
   const url = (request as unknown as Request).url;
+  const urlObj = new URL(url);
 
   const isDevelopment = env.ENVIRONMENT === 'development' ||
                         headers.get('Origin')?.includes('localhost') ||
@@ -42,9 +43,30 @@ export const requireAuth = async (request: IRequest, env: Environment) => {
       publishableKey: env.CLERK_PUBLISHABLE_KEY
     });
 
+    // Check for auth token in query parameter for WebSocket connections
+    // This is needed because WebSocket connections can't easily set Authorization headers
+    const authQueryParam = urlObj.searchParams.get('auth');
+
+    // Create a new request with the auth token in the Authorization header if it exists in query params
+    let requestToAuthenticate: Request = request as unknown as Request;
+
+    if (isWebSocketConnection && authQueryParam) {
+      // Clone the request and add the Authorization header
+      const newHeaders = new Headers(headers);
+      newHeaders.set('Authorization', `Bearer ${authQueryParam}`);
+
+      requestToAuthenticate = new Request(url, {
+        method: (request as unknown as Request).method,
+        headers: newHeaders,
+        body: (request as unknown as Request).body,
+      });
+
+      console.log('Using auth token from query parameter for WebSocket connection');
+    }
+
     // Get the session from the request
     // This automatically checks for the Authorization header or the clerk-session-id cookie
-    const requestState = await clerk.authenticateRequest(request as unknown as Request);
+    const requestState = await clerk.authenticateRequest(requestToAuthenticate);
 
     // Get the auth object from the request state
     const auth = requestState.toAuth();
