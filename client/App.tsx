@@ -113,8 +113,9 @@ function TldrawWithClerkAuth() {
     : '';  // Empty string when no token
 
   // Create the sync store with user info
+  // Always call useSync at the top level, even if wsUri is empty
   const store = useSync({
-    uri: wsUri,
+    uri: wsUri || '',
     assets: multiplayerAssetStore,
     userInfo: userPreferences,
   });
@@ -122,48 +123,55 @@ function TldrawWithClerkAuth() {
   // Create the handler by passing getToken to the factory function
   const bookmarkPreviewHandler = createBookmarkPreviewHandler(getToken);
 
-  // Show loading state while fetching the token
-  if (isLoading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-          fontSize: "1.5rem",
-        }}
-      >
-        Loading...
-      </div>
-    );
-  }
+  // Prepare UI states
+  const loadingUI = (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        fontSize: "1.5rem",
+      }}
+    >
+      Loading...
+    </div>
+  );
 
-  // If we don't have an auth token, show an error
-  if (!authToken) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-          fontSize: "1.5rem",
-          flexDirection: "column",
-          gap: "1rem",
-        }}
-      >
-        <p>Authentication required. Please sign in to continue.</p>
-        <SignInButton mode="modal" />
-      </div>
-    );
-  }
+  const authRequiredUI = (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        fontSize: "1.5rem",
+        flexDirection: "column",
+        gap: "1rem",
+      }}
+    >
+      <p>Authentication required. Please sign in to continue.</p>
+      <SignInButton mode="modal" />
+    </div>
+  );
+
+  // Determine which UI to show
+  const showLoadingUI = isLoading;
+  const showAuthRequiredUI = !isLoading && !authToken;
 
   // State for user settings modal
   const [showUserSettings, setShowUserSettings] = useState(false);
-  const [tempName, setTempName] = useState(userPreferences.name || '');
+  const [tempName, setTempName] = useState('');
 
-  return (
+  // Update tempName when userPreferences.name changes or when modal opens
+  useEffect(() => {
+    if (showUserSettings) {
+      setTempName(userPreferences.name || '');
+    }
+  }, [showUserSettings, userPreferences.name]);
+
+  // Main app content
+  const mainContent = (
     <div style={{ position: "fixed", inset: 0 }}>
       <Tldraw
         store={store}
@@ -318,6 +326,15 @@ function TldrawWithClerkAuth() {
         </div>
       )}
     </div>
+  );
+
+  // Return the appropriate UI based on state
+  return (
+    <>
+      {isLoading ? loadingUI : null}
+      {!isLoading && !authToken ? authRequiredUI : null}
+      {!isLoading && authToken ? mainContent : null}
+    </>
   );
 }
 
