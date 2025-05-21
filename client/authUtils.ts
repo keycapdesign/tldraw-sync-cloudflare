@@ -11,7 +11,7 @@ export function useAuthToken() {
     }
     
     try {
-      const token = await getToken();
+      const token = await getToken({ template: 'backend' });
       if (token) {
         return {
           Authorization: `Bearer ${token}`,

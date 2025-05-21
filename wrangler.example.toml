@@ -20,10 +20,10 @@ preview_bucket_name = 'tldraw-preview'
 
 # Environment variables
 [vars]
-# These values should be provided by environment variables or .dev.vars
+# These values will be provided by environment variables or .dev.vars
 # CLERK_SECRET_KEY = ""
 # CLERK_PUBLISHABLE_KEY = ""
-ENVIRONMENT="production"
+ENVIRONMENT = "production"
 
 [[migrations]]
 tag = "v1"

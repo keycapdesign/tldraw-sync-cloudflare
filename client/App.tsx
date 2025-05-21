@@ -32,7 +32,7 @@ function TldrawApp() {
 		const getAuthenticationToken = async () => {
 			try {
 				console.log('Getting authentication token...');
-				const token = await getToken();
+				const token = await getToken({ template: 'backend' });
 				if (token) {
 					console.log('Authentication token obtained');
 					setAuthToken(token);
