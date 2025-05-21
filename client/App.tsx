@@ -78,8 +78,7 @@ function TldrawWithClerkAuth() {
 
             setUserPreferences(loadedPrefs);
 
-            // Store as last saved preferences to avoid immediate re-save
-            lastSavedPrefsRef.current = { ...loadedPrefs };
+            // Preferences loaded from Clerk
 
             console.log('Loaded user preferences from Clerk metadata:', savedPrefs);
           } else {
@@ -93,8 +92,7 @@ function TldrawWithClerkAuth() {
 
             setUserPreferences(defaultPrefs);
 
-            // Store as last saved preferences to avoid immediate re-save
-            lastSavedPrefsRef.current = { ...defaultPrefs };
+            // Default preferences set
           }
         } catch (error) {
           console.error('Error loading user preferences from Clerk:', error);
@@ -105,11 +103,8 @@ function TldrawWithClerkAuth() {
     loadUserPreferences();
   }, [user, randomName]);
 
-  // Create a ref to store the last saved preferences to avoid unnecessary saves
-  const lastSavedPrefsRef = useRef<TLUserPreferences | null>(null);
-
-  // Track the last preferences to detect when editing is complete
-  const [lastPreferences, setLastPreferences] = useState<TLUserPreferences | null>(null);
+  // Create a ref to store the timeout ID for saving preferences
+  const saveTimeoutRef = useRef<number | null>(null);
 
   // Create the tldraw user object
   const tldrawUser = useTldrawUser({
@@ -118,11 +113,34 @@ function TldrawWithClerkAuth() {
       // Update local state
       setUserPreferences(newPreferences);
 
-      // Store the latest preferences
-      setLastPreferences(newPreferences);
+      // Clear any existing timeout
+      if (saveTimeoutRef.current !== null) {
+        window.clearTimeout(saveTimeoutRef.current);
+      }
 
-      // We'll save to Clerk when the editor instance is available
-      // This prevents saving while the user is actively typing
+      // Set a timeout to save preferences after a delay
+      // This ensures we don't save while the user is still editing
+      saveTimeoutRef.current = window.setTimeout(() => {
+        if (user) {
+          try {
+            console.log('Saving user preferences to Clerk metadata:', newPreferences);
+            user.update({
+              unsafeMetadata: {
+                tldrawPreferences: {
+                  name: newPreferences.name,
+                  color: newPreferences.color,
+                  colorScheme: newPreferences.colorScheme,
+                }
+              }
+            }).catch(error => {
+              console.error('Error saving user preferences to Clerk:', error);
+            });
+          } catch (error) {
+            console.error('Error updating Clerk metadata:', error);
+          }
+        }
+        saveTimeoutRef.current = null;
+      }, 1000); // 1 second delay
     },
   });
 
@@ -209,49 +227,27 @@ function TldrawWithClerkAuth() {
               // Register the bookmark preview handler
               editor.registerExternalAssetHandler("url", bookmarkPreviewHandler);
 
-              // Set up a click event listener on the document to detect when the user clicks outside the popover
-              document.addEventListener('mousedown', () => {
-                // If we have preferences to save and the user is logged in
-                if (lastPreferences && user) {
-                  try {
-                    // Save the preferences to Clerk metadata
-                    user.update({
-                      unsafeMetadata: {
-                        tldrawPreferences: {
-                          name: lastPreferences.name,
-                          color: lastPreferences.color,
-                          colorScheme: lastPreferences.colorScheme,
-                        }
-                      }
-                    }).then(() => {
-                      console.log('Saved user preferences to Clerk metadata:', lastPreferences);
-                      // Update the last saved preferences
-                      lastSavedPrefsRef.current = { ...lastPreferences };
-                    }).catch(error => {
-                      console.error('Error saving user preferences to Clerk:', error);
-                    });
-                  } catch (error) {
-                    console.error('Error updating Clerk metadata:', error);
-                  }
-                }
-              });
-
-              // Also save preferences when the component unmounts
+              // Save preferences when the component unmounts
               return () => {
-                // If we have preferences to save and the user is logged in
-                if (lastPreferences && user) {
+                // Clear any pending save timeout
+                if (saveTimeoutRef.current !== null) {
+                  window.clearTimeout(saveTimeoutRef.current);
+                  saveTimeoutRef.current = null;
+                }
+
+                // Save the current preferences to Clerk
+                if (user) {
                   try {
-                    // Save the preferences to Clerk metadata
                     user.update({
                       unsafeMetadata: {
                         tldrawPreferences: {
-                          name: lastPreferences.name,
-                          color: lastPreferences.color,
-                          colorScheme: lastPreferences.colorScheme,
+                          name: userPreferences.name,
+                          color: userPreferences.color,
+                          colorScheme: userPreferences.colorScheme,
                         }
                       }
                     }).then(() => {
-                      console.log('Saved user preferences to Clerk metadata on unmount:', lastPreferences);
+                      console.log('Saved user preferences to Clerk metadata on unmount');
                     }).catch(error => {
                       console.error('Error saving user preferences to Clerk on unmount:', error);
                     });
