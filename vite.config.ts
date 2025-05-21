@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
     env.VITE_TLDRAW_WORKER_URL ||
     (mode === "production"
       ? "https://tldraw-worker.andrew-eca.workers.dev"
-      : "`http://${location.hostname}:5172`");
+      : "http://localhost:5172");
 
   // Get the Clerk publishable key from the environment variable
   const clerkPublishableKey = env.VITE_CLERK_PUBLISHABLE_KEY

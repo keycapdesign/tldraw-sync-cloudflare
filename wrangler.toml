@@ -15,7 +15,7 @@ bindings = [
 # We store rooms and asset uploads in an R2 bucket
 [[r2_buckets]]
 binding = 'TLDRAW_BUCKET'
-bucket_name = 'tldraw'
+bucket_name = 'tldraw-new'
 preview_bucket_name = 'tldraw-preview'
 
 # Environment variables
