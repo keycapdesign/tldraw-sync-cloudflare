@@ -57,22 +57,73 @@ function TldrawWithClerkAuth() {
     colorScheme: 'light', // Default color scheme
   });
 
-  // Update user preferences when Clerk user changes
+  // Load user preferences from Clerk metadata when user logs in
   useEffect(() => {
-    if (user) {
-      setUserPreferences(prev => ({
-        id: user.id,
-        name: user.fullName || user.username || randomName,
-        color: prev.color, // Keep the same color
-        colorScheme: prev.colorScheme,
-      }));
+    async function loadUserPreferences() {
+      if (user) {
+        try {
+          // Get the user's metadata
+          const metadata = user.unsafeMetadata;
+
+          // If the user has saved preferences, use them
+          if (metadata && metadata.tldrawPreferences) {
+            const savedPrefs = metadata.tldrawPreferences as any;
+
+            setUserPreferences(prev => ({
+              id: user.id,
+              name: savedPrefs.name || user.fullName || user.username || randomName,
+              color: savedPrefs.color || prev.color,
+              colorScheme: savedPrefs.colorScheme || prev.colorScheme,
+            }));
+
+            console.log('Loaded user preferences from Clerk metadata:', savedPrefs);
+          } else {
+            // Otherwise, use default values
+            setUserPreferences(prev => ({
+              id: user.id,
+              name: user.fullName || user.username || randomName,
+              color: prev.color,
+              colorScheme: prev.colorScheme,
+            }));
+          }
+        } catch (error) {
+          console.error('Error loading user preferences from Clerk:', error);
+        }
+      }
     }
+
+    loadUserPreferences();
   }, [user, randomName]);
 
   // Create the tldraw user object
   const tldrawUser = useTldrawUser({
     userPreferences,
-    setUserPreferences,
+    setUserPreferences: (newPreferences) => {
+      // Update local state
+      setUserPreferences(newPreferences);
+
+      // Save to Clerk metadata if user is logged in
+      if (user) {
+        try {
+          // Save the preferences to Clerk metadata
+          user.update({
+            unsafeMetadata: {
+              tldrawPreferences: {
+                name: newPreferences.name,
+                color: newPreferences.color,
+                colorScheme: newPreferences.colorScheme,
+              }
+            }
+          }).then(() => {
+            console.log('Saved user preferences to Clerk metadata:', newPreferences);
+          }).catch(error => {
+            console.error('Error saving user preferences to Clerk:', error);
+          });
+        } catch (error) {
+          console.error('Error updating Clerk metadata:', error);
+        }
+      }
+    },
   });
 
   // Fetch the auth token when the component mounts
