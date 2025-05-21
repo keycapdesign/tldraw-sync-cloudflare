@@ -2,7 +2,25 @@ import { useSync } from "@tldraw/sync";
 import { TLUserPreferences, Tldraw, useTldrawUser } from "tldraw";
 import { createBookmarkPreviewHandler } from "./getBookmarkPreview";
 import { multiplayerAssetStore, setAuthToken as setGlobalAuthToken } from "./multiplayerAssetStore";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+// Array of fun animal names for random user names
+const animalNames = [
+  "Alligator", "Anteater", "Armadillo", "Auroch", "Axolotl", "Badger", "Bat", "Beaver", "Buffalo",
+  "Camel", "Capybara", "Chameleon", "Cheetah", "Chinchilla", "Chipmunk", "Chupacabra", "Cormorant",
+  "Coyote", "Crow", "Dingo", "Dinosaur", "Dolphin", "Duck", "Elephant", "Ferret", "Fox", "Frog",
+  "Giraffe", "Gopher", "Grizzly", "Hedgehog", "Hippo", "Hyena", "Ibex", "Ifrit", "Iguana", "Jackal",
+  "Kangaroo", "Koala", "Kraken", "Lemur", "Leopard", "Liger", "Llama", "Manatee", "Mink", "Monkey",
+  "Moose", "Narwhal", "Nyan Cat", "Orangutan", "Otter", "Panda", "Penguin", "Platypus", "Pumpkin",
+  "Python", "Quagga", "Rabbit", "Raccoon", "Rhino", "Sheep", "Shrew", "Skunk", "Squirrel", "Tiger",
+  "Turtle", "Walrus", "Wolf", "Wolverine", "Wombat"
+];
+
+// Array of colors for random user colors
+const userColors = [
+  "red", "orange", "yellow", "green", "blue", "purple", "pink", "teal", "indigo", "violet",
+  "cyan", "magenta", "lime", "amber", "emerald", "rose", "sky", "fuchsia"
+];
 
 import {
   ClerkProvider,
@@ -29,25 +47,37 @@ function TldrawWithClerkAuth() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Create user preferences from Clerk user data
+  // Generate a random name and color for the user
+  const randomName = useMemo(() => {
+    const adjectives = ["Happy", "Sleepy", "Grumpy", "Sneezy", "Dopey", "Bashful", "Doc"];
+    const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomAnimal = animalNames[Math.floor(Math.random() * animalNames.length)];
+    return `${randomAdjective} ${randomAnimal}`;
+  }, []);
+
+  const randomColor = useMemo(() => {
+    return userColors[Math.floor(Math.random() * userColors.length)];
+  }, []);
+
+  // Create user preferences from Clerk user data or random values
   const [userPreferences, setUserPreferences] = useState<TLUserPreferences>({
-    id: user?.id || 'anonymous',
-    name: user?.fullName || user?.username || 'Anonymous',
-    color: 'blue', // Default color
+    id: user?.id || `anonymous-${Math.random().toString(36).substring(2, 9)}`,
+    name: user?.fullName || user?.username || randomName,
+    color: randomColor,
     colorScheme: 'light', // Default color scheme
   });
 
   // Update user preferences when Clerk user changes
   useEffect(() => {
     if (user) {
-      setUserPreferences({
+      setUserPreferences(prev => ({
         id: user.id,
-        name: user.fullName || user.username || 'Anonymous',
-        color: 'blue', // You could assign colors based on user ID if desired
-        colorScheme: 'light',
-      });
+        name: user.fullName || user.username || randomName,
+        color: prev.color, // Keep the same color
+        colorScheme: prev.colorScheme,
+      }));
     }
-  }, [user]);
+  }, [user, randomName]);
 
   // Create the tldraw user object
   const tldrawUser = useTldrawUser({
@@ -129,6 +159,10 @@ function TldrawWithClerkAuth() {
     );
   }
 
+  // State for user settings modal
+  const [showUserSettings, setShowUserSettings] = useState(false);
+  const [tempName, setTempName] = useState(userPreferences.name || '');
+
   return (
     <div style={{ position: "fixed", inset: 0 }}>
       <Tldraw
@@ -139,6 +173,8 @@ function TldrawWithClerkAuth() {
           editor.registerExternalAssetHandler("url", bookmarkPreviewHandler);
         }}
       />
+
+      {/* User settings button */}
       <div
         style={{
           position: "absolute",
@@ -149,8 +185,23 @@ function TldrawWithClerkAuth() {
           padding: "5px",
           borderRadius: "5px",
           boxShadow: "0 0 5px rgba(0,0,0,0.2)",
+          display: "flex",
+          gap: "8px",
         }}
       >
+        <button
+          onClick={() => setShowUserSettings(true)}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "5px 10px",
+            borderRadius: "4px",
+            backgroundColor: "#f0f0f0",
+          }}
+        >
+          Edit Profile
+        </button>
         <SignedIn>
           <UserButton />
         </SignedIn>
@@ -158,6 +209,114 @@ function TldrawWithClerkAuth() {
           <SignInButton mode="modal" />
         </SignedOut>
       </div>
+
+      {/* User settings modal */}
+      {showUserSettings && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 2000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "20px",
+              borderRadius: "8px",
+              width: "300px",
+              maxWidth: "90%",
+            }}
+          >
+            <h2 style={{ marginTop: 0 }}>User Settings</h2>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "5px" }}>
+                Display Name:
+              </label>
+              <input
+                type="text"
+                value={tempName}
+                onChange={(e) => setTempName(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  border: "1px solid #ccc",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "5px" }}>
+                Color:
+              </label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                {userColors.map((color) => (
+                  <div
+                    key={color}
+                    onClick={() => {
+                      setUserPreferences((prev) => ({
+                        ...prev,
+                        color,
+                      }));
+                    }}
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      backgroundColor: color,
+                      borderRadius: "50%",
+                      cursor: "pointer",
+                      border: userPreferences.color === color ? "2px solid black" : "none",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                onClick={() => setShowUserSettings(false)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "4px",
+                  border: "none",
+                  backgroundColor: "#f0f0f0",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setUserPreferences((prev) => ({
+                    ...prev,
+                    name: tempName || randomName,
+                  }));
+                  setShowUserSettings(false);
+                }}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "4px",
+                  border: "none",
+                  backgroundColor: "#0066ff",
+                  color: "white",
+                  cursor: "pointer",
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
