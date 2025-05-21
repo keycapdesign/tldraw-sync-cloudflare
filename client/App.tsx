@@ -156,8 +156,8 @@ function TldrawWithClerkAuth() {
   );
 
   // Determine which UI to show
-  const showLoadingUI = isLoading;
-  const showAuthRequiredUI = !isLoading && !authToken;
+  // const showLoadingUI = isLoading;
+  // const showAuthRequiredUI = !isLoading && !authToken;
 
   // State for user settings modal
   const [showUserSettings, setShowUserSettings] = useState(false);
