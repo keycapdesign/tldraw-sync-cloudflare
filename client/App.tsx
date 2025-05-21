@@ -2,7 +2,7 @@ import { useSync } from "@tldraw/sync";
 import { TLUserPreferences, Tldraw, useTldrawUser } from "tldraw";
 import { createBookmarkPreviewHandler } from "./getBookmarkPreview";
 import { multiplayerAssetStore, setAuthToken as setGlobalAuthToken } from "./multiplayerAssetStore";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   ClerkProvider,
