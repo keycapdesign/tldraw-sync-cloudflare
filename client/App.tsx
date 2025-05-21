@@ -4,23 +4,16 @@ import { createBookmarkPreviewHandler } from "./getBookmarkPreview";
 import { multiplayerAssetStore, setAuthToken as setGlobalAuthToken } from "./multiplayerAssetStore";
 import { useEffect, useMemo, useState } from "react";
 
-// Array of fun animal names for random user names
+// Array of fun animal names for random user names (used with tldraw's built-in user settings)
 const animalNames = [
-  "Alligator", "Anteater", "Armadillo", "Auroch", "Axolotl", "Badger", "Bat", "Beaver", "Buffalo",
-  "Camel", "Capybara", "Chameleon", "Cheetah", "Chinchilla", "Chipmunk", "Chupacabra", "Cormorant",
-  "Coyote", "Crow", "Dingo", "Dinosaur", "Dolphin", "Duck", "Elephant", "Ferret", "Fox", "Frog",
-  "Giraffe", "Gopher", "Grizzly", "Hedgehog", "Hippo", "Hyena", "Ibex", "Ifrit", "Iguana", "Jackal",
-  "Kangaroo", "Koala", "Kraken", "Lemur", "Leopard", "Liger", "Llama", "Manatee", "Mink", "Monkey",
-  "Moose", "Narwhal", "Nyan Cat", "Orangutan", "Otter", "Panda", "Penguin", "Platypus", "Pumpkin",
-  "Python", "Quagga", "Rabbit", "Raccoon", "Rhino", "Sheep", "Shrew", "Skunk", "Squirrel", "Tiger",
-  "Turtle", "Walrus", "Wolf", "Wolverine", "Wombat"
+  "Alligator", "Anteater", "Armadillo", "Badger", "Bat", "Beaver", "Buffalo", "Camel", "Capybara",
+  "Chameleon", "Cheetah", "Chipmunk", "Coyote", "Crow", "Dolphin", "Duck", "Elephant", "Ferret",
+  "Fox", "Frog", "Giraffe", "Gopher", "Hedgehog", "Hippo", "Kangaroo", "Koala", "Lemur", "Leopard",
+  "Llama", "Manatee", "Monkey", "Moose", "Narwhal", "Otter", "Panda", "Penguin", "Platypus",
+  "Rabbit", "Raccoon", "Rhino", "Sheep", "Squirrel", "Tiger", "Turtle", "Walrus", "Wolf", "Wombat"
 ];
 
-// Array of colors for random user colors (no white since it wouldn't be visible)
-const userColors = [
-  "red", "orange", "yellow", "green", "blue", "purple", "pink", "teal", "indigo", "violet",
-  "cyan", "magenta", "lime", "darkorange", "forestgreen", "crimson", "royalblue", "darkviolet"
-];
+// We're using tldraw's built-in user settings UI
 
 import {
   ClerkProvider,
@@ -47,7 +40,7 @@ function TldrawWithClerkAuth() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Generate a random name and color for the user
+  // Generate a random name for the user
   const randomName = useMemo(() => {
     const adjectives = ["Happy", "Sleepy", "Grumpy", "Sneezy", "Dopey", "Bashful", "Doc"];
     const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
@@ -55,15 +48,12 @@ function TldrawWithClerkAuth() {
     return `${randomAdjective} ${randomAnimal}`;
   }, []);
 
-  const randomColor = useMemo(() => {
-    return userColors[Math.floor(Math.random() * userColors.length)];
-  }, []);
-
   // Create user preferences from Clerk user data or random values
+  // We're using a default color that's visible against white background
   const [userPreferences, setUserPreferences] = useState<TLUserPreferences>({
     id: user?.id || `anonymous-${Math.random().toString(36).substring(2, 9)}`,
     name: user?.fullName || user?.username || randomName,
-    color: randomColor,
+    color: "blue", // Default color
     colorScheme: 'light', // Default color scheme
   });
 
@@ -159,16 +149,7 @@ function TldrawWithClerkAuth() {
   // const showLoadingUI = isLoading;
   // const showAuthRequiredUI = !isLoading && !authToken;
 
-  // State for user settings modal
-  const [showUserSettings, setShowUserSettings] = useState(false);
-  const [tempName, setTempName] = useState('');
-
-  // Update tempName when userPreferences.name changes or when modal opens
-  useEffect(() => {
-    if (showUserSettings) {
-      setTempName(userPreferences.name || '');
-    }
-  }, [showUserSettings, userPreferences.name]);
+  // No need for user settings modal state since tldraw has built-in UI for this
 
   // Main app content
   const mainContent = (
@@ -182,7 +163,7 @@ function TldrawWithClerkAuth() {
         }}
       />
 
-      {/* User settings button - moved to bottom right */}
+      {/* Clerk UI - moved to bottom right */}
       <div
         style={{
           position: "absolute",
@@ -193,39 +174,8 @@ function TldrawWithClerkAuth() {
           padding: "8px",
           borderRadius: "8px",
           boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-          display: "flex",
-          gap: "10px",
-          alignItems: "center",
         }}
       >
-        <div style={{ fontSize: "14px", color: "#666" }}>
-          <span style={{
-            display: "inline-block",
-            width: "12px",
-            height: "12px",
-            borderRadius: "50%",
-            backgroundColor: userPreferences.color || "blue",
-            marginRight: "5px"
-          }}></span>
-          {userPreferences.name}
-        </div>
-        <button
-          onClick={() => setShowUserSettings(true)}
-          style={{
-            background: "none",
-            border: "1px solid #ddd",
-            cursor: "pointer",
-            padding: "6px 12px",
-            borderRadius: "4px",
-            backgroundColor: "#f8f8f8",
-            fontSize: "13px",
-            transition: "all 0.2s ease",
-          }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f0f0f0"}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#f8f8f8"}
-        >
-          Edit Profile
-        </button>
         <SignedIn>
           <UserButton />
         </SignedIn>
@@ -233,162 +183,6 @@ function TldrawWithClerkAuth() {
           <SignInButton mode="modal" />
         </SignedOut>
       </div>
-
-      {/* User settings modal */}
-      {showUserSettings && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 2000,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "white",
-              padding: "24px",
-              borderRadius: "12px",
-              width: "340px",
-              maxWidth: "90%",
-              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "600" }}>User Settings</h2>
-              <button
-                onClick={() => setShowUserSettings(false)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "20px",
-                  lineHeight: 1,
-                  color: "#999",
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={{ marginBottom: "20px" }}>
-              <label style={{
-                display: "block",
-                marginBottom: "8px",
-                fontSize: "14px",
-                fontWeight: "500",
-                color: "#555"
-              }}>
-                Display Name
-              </label>
-              <input
-                type="text"
-                value={tempName}
-                placeholder="Enter your display name"
-                onChange={(e) => setTempName(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  fontSize: "14px",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: "24px" }}>
-              <label style={{
-                display: "block",
-                marginBottom: "8px",
-                fontSize: "14px",
-                fontWeight: "500",
-                color: "#555"
-              }}>
-                Cursor Color
-              </label>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(6, 1fr)",
-                gap: "8px",
-                marginTop: "5px"
-              }}>
-                {userColors.map((color) => (
-                  <div
-                    key={color}
-                    onClick={() => {
-                      setUserPreferences((prev) => ({
-                        ...prev,
-                        color,
-                      }));
-                    }}
-                    style={{
-                      width: "36px",
-                      height: "36px",
-                      backgroundColor: color,
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      border: userPreferences.color === color ? "3px solid #333" : "1px solid #ddd",
-                      transition: "transform 0.1s ease",
-                      transform: userPreferences.color === color ? "scale(1.1)" : "scale(1)",
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
-              <button
-                onClick={() => setShowUserSettings(false)}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: "6px",
-                  border: "1px solid #ddd",
-                  backgroundColor: "white",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  transition: "background-color 0.2s ease",
-                }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f5f5f5"}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = "white"}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setUserPreferences((prev) => ({
-                    ...prev,
-                    name: tempName || randomName,
-                  }));
-                  setShowUserSettings(false);
-                }}
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: "6px",
-                  border: "none",
-                  backgroundColor: "#0066ff",
-                  color: "white",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  transition: "background-color 0.2s ease",
-                }}
-                onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#0052cc"}
-                onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#0066ff"}
-              >
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 
