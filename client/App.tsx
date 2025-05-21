@@ -84,7 +84,12 @@ function TldrawApp() {
 
 			// Add event listeners for debugging
 			socket.addEventListener('error', (event: Event) => {
-				console.error('WebSocket error:', event);
+				// Try to log more details if available
+				if ('message' in event) {
+					console.error('WebSocket error:', event, (event as any).message, (event as any).stack);
+				} else {
+					console.error('WebSocket error:', event);
+				}
 			});
 
 			socket.addEventListener('close', (event: CloseEvent) => {

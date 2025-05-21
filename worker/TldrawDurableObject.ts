@@ -118,20 +118,22 @@ export class TldrawDurableObject {
 								authenticated = true;
 								userMetadata = { userId: payload.sub };
 								console.log('Authentication successful', { userId: payload.sub });
+								// Send an auth confirmation to the client
+								serverWebSocket.send(JSON.stringify({ type: 'auth-ok', userId: payload.sub }));
 							}
 						} catch (e) {
-							console.error('Error parsing token:', e);
+							console.error('Error parsing token:', e, e?.message, e?.stack);
 						}
 					}
 				}
 			} catch (e) {
-				console.error('Error handling WebSocket message:', e);
+				console.error('Error handling WebSocket message:', e, e?.message, e?.stack);
 			}
 		});
 
 		// Add error and close event listeners for debugging
 		serverWebSocket.addEventListener('error', (error) => {
-			console.error('WebSocket error:', error);
+			console.error('WebSocket error:', error, error?.message, error?.stack);
 		});
 
 		serverWebSocket.addEventListener('close', (event) => {
