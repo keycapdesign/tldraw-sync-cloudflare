@@ -62,23 +62,23 @@ export class TldrawDurableObject {
 	}
 
 	// what happens when someone tries to connect to this room?
-	async handleConnect(request: IRequest): Promise<Response> {
+	async handleConnect(request: any): Promise<Response> {
 		// extract query params from request
-		const sessionId = request.query.sessionId as string
+		const sessionId = (request as any).query.sessionId as string;
 		if (!sessionId) return error(400, 'Missing sessionId')
 
 		// Get user ID from the headers if available
-		const userId = request.headers.get('X-User-ID')
+		const userId = (request as any).headers.get('X-User-ID');
 
 		// Get auth token from query params if available
-		const url = new URL(request.url);
+		const url = new URL((request as any).url);
 		const authToken = url.searchParams.get('auth');
 
 		console.log('WebSocket connection request', {
 			sessionId,
 			hasUserId: !!userId,
 			hasAuthToken: !!authToken,
-			headers: JSON.stringify(Object.fromEntries([...request.headers.entries()]))
+			headers: JSON.stringify(Object.fromEntries([...(request as any).headers.entries()]))
 		});
 
 		// Create the websocket pair for the client
@@ -89,8 +89,7 @@ export class TldrawDurableObject {
 		const room = await this.getRoom()
 
 		// Set up message handler for authentication
-		let authenticated = !!userId; // If we have a userId from headers, consider it authenticated
-		let userMetadata = userId ? { userId } : undefined;
+		let authenticated = !!userId;
 
 		console.log('WebSocket connection established', {
 			sessionId,
@@ -107,33 +106,28 @@ export class TldrawDurableObject {
 				// Handle authentication message
 				if (data.type === 'auth' && data.token) {
 					console.log('Auth message received');
-					// In a real implementation, you would verify the token here
-					// For now, we'll just extract the user ID from the token
-					// This is a simplified example - in production, use proper JWT verification
 					const tokenParts = data.token.split('.');
 					if (tokenParts.length === 3) {
 						try {
 							const payload = JSON.parse(atob(tokenParts[1]));
 							if (payload.sub) {
 								authenticated = true;
-								userMetadata = { userId: payload.sub };
 								console.log('Authentication successful', { userId: payload.sub });
-								// Send an auth confirmation to the client
 								serverWebSocket.send(JSON.stringify({ type: 'auth-ok', userId: payload.sub }));
 							}
 						} catch (e) {
-							console.error('Error parsing token:', e, e?.message, e?.stack);
+							console.error('Error parsing token:', e);
 						}
 					}
 				}
 			} catch (e) {
-				console.error('Error handling WebSocket message:', e, e?.message, e?.stack);
+				console.error('Error handling WebSocket message:', e);
 			}
 		});
 
 		// Add error and close event listeners for debugging
 		serverWebSocket.addEventListener('error', (error) => {
-			console.error('WebSocket error:', error, error?.message, error?.stack);
+			console.error('WebSocket error:', error);
 		});
 
 		serverWebSocket.addEventListener('close', (event) => {
@@ -143,9 +137,7 @@ export class TldrawDurableObject {
 		// connect the client to the room
 		room.handleSocketConnect({
 			sessionId,
-			socket: serverWebSocket,
-			// Add user metadata if available
-			metadata: userMetadata
+			socket: serverWebSocket
 		})
 
 		console.log('Client connected to room', { roomId: this.roomId, sessionId });

@@ -36,24 +36,21 @@ const router = AutoRouter<IRequest, [env: Environment, ctx: ExecutionContext]>({
 	// requests to /connect are routed to the Durable Object, and handle realtime websocket syncing
 	.get('/connect/:roomId', async (request, env) => {
 		// Check if auth token is provided in the query parameter
-		const url = new URL(request.url);
+		const url = new URL((request as Request).url);
 		const authToken = url.searchParams.get('auth');
 
 		// Create a new headers object with the auth token if provided
-		const headers = new Headers(request.headers);
+		const headers = new Headers((request as Request).headers);
 		if (authToken) {
 			headers.set('Authorization', `Bearer ${authToken}`);
 		}
 
 		// Create a new request with the updated headers
-		const authenticatedRequest = new Request(request.url, {
-			method: request.method,
+		const authenticatedRequest = new Request((request as Request).url, {
+			method: (request as Request).method,
 			headers: headers,
-			body: request.body,
+			body: (request as Request).body,
 		});
-
-		// Add the params from the original request
-		(authenticatedRequest as any).params = request.params;
 
 		// Check authentication before allowing connection
 		const authResult = await requireAuth(authenticatedRequest, env)
@@ -61,15 +58,22 @@ const router = AutoRouter<IRequest, [env: Environment, ctx: ExecutionContext]>({
 			return authResult
 		}
 
+		// If requireAuth added a userId, set it on the headers for the DO
+		if ((authenticatedRequest as any).userId) {
+			headers.set('X-User-ID', (authenticatedRequest as any).userId)
+		}
+
+		// Always create a new Request with the correct headers for the Durable Object
+		const doRequest = new Request((request as Request).url, {
+			method: (request as Request).method,
+			headers,
+			body: (request as Request).body,
+		});
+
 		const id = env.TLDRAW_DURABLE_OBJECT.idFromName(request.params.roomId)
 		const room = env.TLDRAW_DURABLE_OBJECT.get(id)
 
-		// Pass the user ID to the Durable Object if available
-		if (authenticatedRequest.userId) {
-			headers.set('X-User-ID', authenticatedRequest.userId)
-		}
-
-		return room.fetch(request.url, { headers, body: request.body })
+		return room.fetch(doRequest)
 	})
 
 	// assets can be uploaded to the bucket under /uploads:
