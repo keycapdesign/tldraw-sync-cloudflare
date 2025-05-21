@@ -1,12 +1,13 @@
 import { useSync } from "@tldraw/sync";
-import { Tldraw } from "tldraw";
+import { TLUserPreferences, Tldraw, useTldrawUser } from "tldraw";
 import { createBookmarkPreviewHandler } from "./getBookmarkPreview";
 import { multiplayerAssetStore, setAuthToken as setGlobalAuthToken } from "./multiplayerAssetStore";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ClerkProvider,
   useAuth,
+  useUser,
   SignedIn,
   SignedOut,
   SignInButton,
@@ -23,9 +24,36 @@ if (!VITE_CLERK_PUBLISHABLE_KEY) {
 const roomId = "test-room";
 
 function TldrawWithClerkAuth() {
-  const { getToken } = useAuth(); // Call useAuth at the top level
+  const { getToken } = useAuth();
+  const { user } = useUser();
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Create user preferences from Clerk user data
+  const [userPreferences, setUserPreferences] = useState<TLUserPreferences>({
+    id: user?.id || 'anonymous',
+    name: user?.fullName || user?.username || 'Anonymous',
+    color: 'blue', // Default color
+    colorScheme: 'light', // Default color scheme
+  });
+
+  // Update user preferences when Clerk user changes
+  useEffect(() => {
+    if (user) {
+      setUserPreferences({
+        id: user.id,
+        name: user.fullName || user.username || 'Anonymous',
+        color: 'blue', // You could assign colors based on user ID if desired
+        colorScheme: 'light',
+      });
+    }
+  }, [user]);
+
+  // Create the tldraw user object
+  const tldrawUser = useTldrawUser({
+    userPreferences,
+    setUserPreferences,
+  });
 
   // Fetch the auth token when the component mounts
   useEffect(() => {
@@ -54,10 +82,11 @@ function TldrawWithClerkAuth() {
     ? `${WORKER_URL}/connect/${roomId}?auth=${authToken}`
     : '';  // Empty string when no token
 
-  // Always call useSync, but with a dummy URI if we don't have a token yet
+  // Create the sync store with user info
   const store = useSync({
     uri: wsUri,
     assets: multiplayerAssetStore,
+    userInfo: userPreferences,
   });
 
   // Create the handler by passing getToken to the factory function
@@ -104,6 +133,7 @@ function TldrawWithClerkAuth() {
     <div style={{ position: "fixed", inset: 0 }}>
       <Tldraw
         store={store}
+        user={tldrawUser}
         onMount={(editor) => {
           // Pass the already created handler instance
           editor.registerExternalAssetHandler("url", bookmarkPreviewHandler);
