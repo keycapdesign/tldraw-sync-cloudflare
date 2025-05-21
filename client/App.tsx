@@ -16,10 +16,10 @@ const animalNames = [
   "Turtle", "Walrus", "Wolf", "Wolverine", "Wombat"
 ];
 
-// Array of colors for random user colors
+// Array of colors for random user colors (no white since it wouldn't be visible)
 const userColors = [
   "red", "orange", "yellow", "green", "blue", "purple", "pink", "teal", "indigo", "violet",
-  "cyan", "magenta", "lime", "amber", "emerald", "rose", "sky", "fuchsia"
+  "cyan", "magenta", "lime", "darkorange", "forestgreen", "crimson", "royalblue", "darkviolet"
 ];
 
 import {
@@ -182,31 +182,47 @@ function TldrawWithClerkAuth() {
         }}
       />
 
-      {/* User settings button */}
+      {/* User settings button - moved to bottom right */}
       <div
         style={{
           position: "absolute",
-          top: "10px",
-          right: "10px",
+          bottom: "20px",
+          right: "20px",
           zIndex: 1000,
           backgroundColor: "white",
-          padding: "5px",
-          borderRadius: "5px",
-          boxShadow: "0 0 5px rgba(0,0,0,0.2)",
+          padding: "8px",
+          borderRadius: "8px",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
           display: "flex",
-          gap: "8px",
+          gap: "10px",
+          alignItems: "center",
         }}
       >
+        <div style={{ fontSize: "14px", color: "#666" }}>
+          <span style={{
+            display: "inline-block",
+            width: "12px",
+            height: "12px",
+            borderRadius: "50%",
+            backgroundColor: userPreferences.color || "blue",
+            marginRight: "5px"
+          }}></span>
+          {userPreferences.name}
+        </div>
         <button
           onClick={() => setShowUserSettings(true)}
           style={{
             background: "none",
-            border: "none",
+            border: "1px solid #ddd",
             cursor: "pointer",
-            padding: "5px 10px",
+            padding: "6px 12px",
             borderRadius: "4px",
-            backgroundColor: "#f0f0f0",
+            backgroundColor: "#f8f8f8",
+            fontSize: "13px",
+            transition: "all 0.2s ease",
           }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f0f0f0"}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#f8f8f8"}
         >
           Edit Profile
         </button>
@@ -237,36 +253,72 @@ function TldrawWithClerkAuth() {
           <div
             style={{
               backgroundColor: "white",
-              padding: "20px",
-              borderRadius: "8px",
-              width: "300px",
+              padding: "24px",
+              borderRadius: "12px",
+              width: "340px",
               maxWidth: "90%",
+              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
             }}
           >
-            <h2 style={{ marginTop: 0 }}>User Settings</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "600" }}>User Settings</h2>
+              <button
+                onClick={() => setShowUserSettings(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "20px",
+                  lineHeight: 1,
+                  color: "#999",
+                }}
+              >
+                ×
+              </button>
+            </div>
 
-            <div style={{ marginBottom: "15px" }}>
-              <label style={{ display: "block", marginBottom: "5px" }}>
-                Display Name:
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                fontWeight: "500",
+                color: "#555"
+              }}>
+                Display Name
               </label>
               <input
                 type="text"
                 value={tempName}
+                placeholder="Enter your display name"
                 onChange={(e) => setTempName(e.target.value)}
                 style={{
                   width: "100%",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
+                  padding: "10px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid #ddd",
+                  fontSize: "14px",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
 
-            <div style={{ marginBottom: "15px" }}>
-              <label style={{ display: "block", marginBottom: "5px" }}>
-                Color:
+            <div style={{ marginBottom: "24px" }}>
+              <label style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "14px",
+                fontWeight: "500",
+                color: "#555"
+              }}>
+                Cursor Color
               </label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(6, 1fr)",
+                gap: "8px",
+                marginTop: "5px"
+              }}>
                 {userColors.map((color) => (
                   <div
                     key={color}
@@ -277,28 +329,35 @@ function TldrawWithClerkAuth() {
                       }));
                     }}
                     style={{
-                      width: "24px",
-                      height: "24px",
+                      width: "36px",
+                      height: "36px",
                       backgroundColor: color,
-                      borderRadius: "50%",
+                      borderRadius: "6px",
                       cursor: "pointer",
-                      border: userPreferences.color === color ? "2px solid black" : "none",
+                      border: userPreferences.color === color ? "3px solid #333" : "1px solid #ddd",
+                      transition: "transform 0.1s ease",
+                      transform: userPreferences.color === color ? "scale(1.1)" : "scale(1)",
                     }}
                   />
                 ))}
               </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
               <button
                 onClick={() => setShowUserSettings(false)}
                 style={{
-                  padding: "8px 16px",
-                  borderRadius: "4px",
-                  border: "none",
-                  backgroundColor: "#f0f0f0",
+                  padding: "10px 16px",
+                  borderRadius: "6px",
+                  border: "1px solid #ddd",
+                  backgroundColor: "white",
                   cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  transition: "background-color 0.2s ease",
                 }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f5f5f5"}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = "white"}
               >
                 Cancel
               </button>
@@ -311,15 +370,20 @@ function TldrawWithClerkAuth() {
                   setShowUserSettings(false);
                 }}
                 style={{
-                  padding: "8px 16px",
-                  borderRadius: "4px",
+                  padding: "10px 16px",
+                  borderRadius: "6px",
                   border: "none",
                   backgroundColor: "#0066ff",
                   color: "white",
                   cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  transition: "background-color 0.2s ease",
                 }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#0052cc"}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#0066ff"}
               >
-                Save
+                Save Changes
               </button>
             </div>
           </div>
