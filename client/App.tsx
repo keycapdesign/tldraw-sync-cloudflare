@@ -2,7 +2,7 @@ import { useSync } from "@tldraw/sync";
 import { TLUserPreferences, Tldraw, useTldrawUser } from "tldraw";
 import { createBookmarkPreviewHandler } from "./getBookmarkPreview";
 import { multiplayerAssetStore, setAuthToken as setGlobalAuthToken } from "./multiplayerAssetStore";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
 // Array of fun animal names for random user names (used with tldraw's built-in user settings)
 const animalNames = [
@@ -69,22 +69,32 @@ function TldrawWithClerkAuth() {
           if (metadata && metadata.tldrawPreferences) {
             const savedPrefs = metadata.tldrawPreferences as any;
 
-            setUserPreferences(prev => ({
+            const loadedPrefs: TLUserPreferences = {
               id: user.id,
               name: savedPrefs.name || user.fullName || user.username || randomName,
-              color: savedPrefs.color || prev.color,
-              colorScheme: savedPrefs.colorScheme || prev.colorScheme,
-            }));
+              color: savedPrefs.color || "blue",
+              colorScheme: (savedPrefs.colorScheme || "light") as "light" | "dark" | "system",
+            };
+
+            setUserPreferences(loadedPrefs);
+
+            // Store as last saved preferences to avoid immediate re-save
+            lastSavedPrefsRef.current = { ...loadedPrefs };
 
             console.log('Loaded user preferences from Clerk metadata:', savedPrefs);
           } else {
             // Otherwise, use default values
-            setUserPreferences(prev => ({
+            const defaultPrefs: TLUserPreferences = {
               id: user.id,
               name: user.fullName || user.username || randomName,
-              color: prev.color,
-              colorScheme: prev.colorScheme,
-            }));
+              color: "blue",
+              colorScheme: "light" as "light",
+            };
+
+            setUserPreferences(defaultPrefs);
+
+            // Store as last saved preferences to avoid immediate re-save
+            lastSavedPrefsRef.current = { ...defaultPrefs };
           }
         } catch (error) {
           console.error('Error loading user preferences from Clerk:', error);
@@ -95,6 +105,59 @@ function TldrawWithClerkAuth() {
     loadUserPreferences();
   }, [user, randomName]);
 
+  // Create a ref to store the timeout ID for debouncing
+  const saveTimeoutRef = useRef<number | null>(null);
+
+  // Create a ref to store the last saved preferences to avoid unnecessary saves
+  const lastSavedPrefsRef = useRef<TLUserPreferences | null>(null);
+
+  // Function to save preferences to Clerk with debounce
+  const savePreferencesToClerkWithDebounce = (prefs: TLUserPreferences) => {
+    // Clear any existing timeout
+    if (saveTimeoutRef.current !== null) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set a new timeout to save preferences after 2 seconds of inactivity
+    saveTimeoutRef.current = window.setTimeout(() => {
+      // Only save if user is logged in
+      if (user) {
+        // Check if preferences have actually changed from last save
+        const lastSaved = lastSavedPrefsRef.current;
+        const shouldSave = !lastSaved ||
+          lastSaved.name !== prefs.name ||
+          lastSaved.color !== prefs.color ||
+          lastSaved.colorScheme !== prefs.colorScheme;
+
+        if (shouldSave) {
+          try {
+            // Save the preferences to Clerk metadata
+            user.update({
+              unsafeMetadata: {
+                tldrawPreferences: {
+                  name: prefs.name,
+                  color: prefs.color,
+                  colorScheme: prefs.colorScheme,
+                }
+              }
+            }).then(() => {
+              console.log('Saved user preferences to Clerk metadata:', prefs);
+              // Update the last saved preferences
+              lastSavedPrefsRef.current = { ...prefs };
+            }).catch(error => {
+              console.error('Error saving user preferences to Clerk:', error);
+            });
+          } catch (error) {
+            console.error('Error updating Clerk metadata:', error);
+          }
+        }
+      }
+
+      // Clear the timeout ref
+      saveTimeoutRef.current = null;
+    }, 2000); // 2 second debounce
+  };
+
   // Create the tldraw user object
   const tldrawUser = useTldrawUser({
     userPreferences,
@@ -102,27 +165,8 @@ function TldrawWithClerkAuth() {
       // Update local state
       setUserPreferences(newPreferences);
 
-      // Save to Clerk metadata if user is logged in
-      if (user) {
-        try {
-          // Save the preferences to Clerk metadata
-          user.update({
-            unsafeMetadata: {
-              tldrawPreferences: {
-                name: newPreferences.name,
-                color: newPreferences.color,
-                colorScheme: newPreferences.colorScheme,
-              }
-            }
-          }).then(() => {
-            console.log('Saved user preferences to Clerk metadata:', newPreferences);
-          }).catch(error => {
-            console.error('Error saving user preferences to Clerk:', error);
-          });
-        } catch (error) {
-          console.error('Error updating Clerk metadata:', error);
-        }
-      }
+      // Debounce saving to Clerk
+      savePreferencesToClerkWithDebounce(newPreferences);
     },
   });
 
@@ -202,47 +246,47 @@ function TldrawWithClerkAuth() {
 
   // No need for user settings modal state since tldraw has built-in UI for this
 
-  // Main app content
-  const mainContent = (
-    <div style={{ position: "fixed", inset: 0 }}>
-      <Tldraw
-        store={store}
-        user={tldrawUser}
-        onMount={(editor) => {
-          // Pass the already created handler instance
-          editor.registerExternalAssetHandler("url", bookmarkPreviewHandler);
-        }}
-      />
-
-      {/* Clerk UI - moved to bottom right */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: "20px",
-          right: "20px",
-          zIndex: 1000,
-          backgroundColor: "white",
-          padding: "8px",
-          borderRadius: "8px",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-        }}
-      >
-        <SignedIn>
-          <UserButton />
-        </SignedIn>
-        <SignedOut>
-          <SignInButton mode="modal" />
-        </SignedOut>
-      </div>
-    </div>
-  );
-
   // Return the appropriate UI based on state
+
   return (
     <>
       {isLoading ? loadingUI : null}
       {!isLoading && !authToken ? authRequiredUI : null}
-      {!isLoading && authToken ? mainContent : null}
+      {!isLoading && authToken ? (
+        <div style={{ position: "fixed", inset: 0 }}>
+          <Tldraw
+            store={store}
+            user={tldrawUser}
+            onMount={(editor) => {
+              // Register the bookmark preview handler
+              editor.registerExternalAssetHandler("url", bookmarkPreviewHandler);
+
+              // We're already saving preferences when they change through the tldrawUser object
+            }}
+          />
+
+          {/* Clerk UI - moved to bottom right */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "20px",
+              right: "20px",
+              zIndex: 1000,
+              backgroundColor: "white",
+              padding: "8px",
+              borderRadius: "8px",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+            }}
+          >
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+            <SignedOut>
+              <SignInButton mode="modal" />
+            </SignedOut>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
