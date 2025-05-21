@@ -38,10 +38,16 @@ export function createBookmarkPreviewHandler(
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_TLDRAW_WORKER_URL}/unfurl?url=${encodeURIComponent(url)}`,
-        { headers },
-      );
+      // Create the URL with the auth token as a query parameter
+      const apiUrl = new URL(`${import.meta.env.VITE_TLDRAW_WORKER_URL}/unfurl`);
+      apiUrl.searchParams.set('url', url);
+
+      // Add auth token as a query parameter for WebSocket compatibility
+      if (token) {
+        apiUrl.searchParams.set('auth', token);
+      }
+
+      const response = await fetch(apiUrl.toString(), { headers });
 
       // It's good practice to check if the response was ok before trying to parse JSON
       if (!response.ok) {
@@ -93,9 +99,11 @@ export async function getBookmarkPreview({
   };
 
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_TLDRAW_WORKER_URL}/unfurl?url=${encodeURIComponent(url)}`,
-    );
+    // Create the URL with the url as a query parameter
+    const apiUrl = new URL(`${import.meta.env.VITE_TLDRAW_WORKER_URL}/unfurl`);
+    apiUrl.searchParams.set('url', url);
+
+    const response = await fetch(apiUrl.toString());
     if (!response.ok) {
       console.error(
         `Error fetching (default) bookmark preview: ${response.status} ${response.statusText}`,

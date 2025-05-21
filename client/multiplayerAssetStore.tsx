@@ -52,9 +52,18 @@ export const multiplayerAssetStore: TLAssetStore = {
     if (!url) return '';
 
     if (currentAuthToken) {
-      // Check if the URL already has query parameters
-      const separator = url.includes('?') ? '&' : '?';
-      return `${url}${separator}auth=${currentAuthToken}`;
+      try {
+        // Parse the URL to handle it properly
+        const urlObj = new URL(url);
+
+        // Add the auth token as a query parameter
+        urlObj.searchParams.set('auth', currentAuthToken);
+
+        return urlObj.toString();
+      } catch (e) {
+        console.error('Error adding auth token to URL:', e);
+        return url;
+      }
     }
     return url;
   },

@@ -52,15 +52,13 @@ function TldrawWithClerkAuth() {
   // Create the WebSocket URI with the auth token
   const wsUri = authToken
     ? `${WORKER_URL}/connect/${roomId}?auth=${authToken}`
-    : null;
+    : '';  // Empty string when no token
 
-  // Create the store only when we have the auth token
-  const store = wsUri
-    ? useSync({
-        uri: wsUri,
-        assets: multiplayerAssetStore,
-      })
-    : null;
+  // Always call useSync, but with a dummy URI if we don't have a token yet
+  const store = useSync({
+    uri: wsUri,
+    assets: multiplayerAssetStore,
+  });
 
   // Create the handler by passing getToken to the factory function
   const bookmarkPreviewHandler = createBookmarkPreviewHandler(getToken);
@@ -82,8 +80,8 @@ function TldrawWithClerkAuth() {
     );
   }
 
-  // If we don't have a store yet, show an error
-  if (!store) {
+  // If we don't have an auth token, show an error
+  if (!authToken) {
     return (
       <div
         style={{
@@ -96,17 +94,8 @@ function TldrawWithClerkAuth() {
           gap: "1rem",
         }}
       >
-        <p>Failed to connect to the server. Please try again.</p>
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            padding: "0.5rem 1rem",
-            fontSize: "1rem",
-            cursor: "pointer",
-          }}
-        >
-          Refresh
-        </button>
+        <p>Authentication required. Please sign in to continue.</p>
+        <SignInButton mode="modal" />
       </div>
     );
   }
