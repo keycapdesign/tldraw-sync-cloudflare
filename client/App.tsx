@@ -1,7 +1,8 @@
 import { useSync } from "@tldraw/sync";
 import { Tldraw } from "tldraw";
 import { createBookmarkPreviewHandler } from "./getBookmarkPreview";
-import { multiplayerAssetStore } from "./multiplayerAssetStore";
+import { multiplayerAssetStore, setAuthToken as setGlobalAuthToken } from "./multiplayerAssetStore";
+import { useEffect, useState } from "react";
 
 import {
   ClerkProvider,
@@ -23,15 +24,92 @@ const roomId = "test-room";
 
 function TldrawWithClerkAuth() {
   const { getToken } = useAuth(); // Call useAuth at the top level
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const store = useSync({
-    uri: `${WORKER_URL}/connect/${roomId}`,
-    assets: multiplayerAssetStore,
-  });
+  // Fetch the auth token when the component mounts
+  useEffect(() => {
+    async function fetchToken() {
+      try {
+        const token = await getToken();
 
-  // Create the handler by passing getToken to the factory function.
-  // You will need to modify createBookmarkPreviewHandler to accept getToken.
+        // Update the state
+        setAuthToken(token);
+
+        // Also update the global token for asset store
+        // This makes the token available for asset uploads and retrievals
+        setGlobalAuthToken(token);
+      } catch (error) {
+        console.error("Error fetching auth token:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchToken();
+  }, [getToken]);
+
+  // Create the WebSocket URI with the auth token
+  const wsUri = authToken
+    ? `${WORKER_URL}/connect/${roomId}?auth=${authToken}`
+    : null;
+
+  // Create the store only when we have the auth token
+  const store = wsUri
+    ? useSync({
+        uri: wsUri,
+        assets: multiplayerAssetStore,
+      })
+    : null;
+
+  // Create the handler by passing getToken to the factory function
   const bookmarkPreviewHandler = createBookmarkPreviewHandler(getToken);
+
+  // Show loading state while fetching the token
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          fontSize: "1.5rem",
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
+
+  // If we don't have a store yet, show an error
+  if (!store) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          fontSize: "1.5rem",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+      >
+        <p>Failed to connect to the server. Please try again.</p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "1rem",
+            cursor: "pointer",
+          }}
+        >
+          Refresh
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: "fixed", inset: 0 }}>
@@ -55,7 +133,7 @@ function TldrawWithClerkAuth() {
         }}
       >
         <SignedIn>
-          <UserButton afterSignOutUrl={window.location.href} />
+          <UserButton />
         </SignedIn>
         <SignedOut>
           <SignInButton mode="modal" />
